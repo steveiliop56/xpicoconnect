@@ -6,7 +6,8 @@ import (
 )
 
 type CommandHandler struct {
-	pb *PicoBridge
+	pb             *PicoBridge
+	commandPending bool
 }
 
 func NewCommandHandler(pb *PicoBridge) *CommandHandler {
@@ -49,11 +50,7 @@ func (ch *CommandHandler) EncodeResponse(command string, status string, result [
 	return []byte(sb.String())
 }
 
-func (ch *CommandHandler) DecodeResponse() (string, error) {
-	res, err := ch.pb.ReadLine()
-	if err != nil {
-		return "", err
-	}
+func (ch *CommandHandler) DecodeResponse(res []byte) (string, error) {
 	parts := strings.SplitN(string(res), ":", 3)
 	if len(parts) != 3 {
 		return "", fmt.Errorf("invalid response, expected command:status:result, got %v", string(res))
@@ -66,9 +63,16 @@ func (ch *CommandHandler) DecodeResponse() (string, error) {
 
 func (ch *CommandHandler) SendCommand(command string, value []byte) (string, error) {
 	encoded := ch.EncodeCommand(command, value)
-	err := ch.pb.WriteLine(encoded)
+	err := ch.pb.Write(encoded)
 	if err != nil {
 		return "", fmt.Errorf("failed to write command to: %v", err)
 	}
-	return ch.DecodeResponse()
+	ch.commandPending = true
+	res := <-ch.pb.GetChannel()
+	ch.commandPending = false
+	return ch.DecodeResponse(res)
+}
+
+func (ch *CommandHandler) CommandPending() bool {
+	return ch.commandPending
 }

@@ -10,20 +10,21 @@ struct t_decodeRes {
 };
 
 struct t_state {
-  bool beacon;
+  bool strobe;
 };
 
-struct t_beacon_state {
+struct t_strobe_state {
   bool ledOn;
   int lastBlink;
 };
 
 t_state state;
-t_beacon_state beacon_state;
+t_strobe_state strobe_state;
 
 void setup() {
   Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(D0, OUTPUT);
 }
 
 void loop() {
@@ -55,6 +56,18 @@ void loop() {
     if (decodedCommand.command == "ping") {
       String encodedRes = encodeRes(decodedCommand.command, true, "pong");
       Serial.println(encodedRes);
+      delay(50);
+      String encodedCmd = encodeCommand("ping", "foo");
+      Serial.println(encodedCmd);
+      if (Serial.available() > 0 ) {
+        String rencodedRes = Serial.readString();
+        rencodedRes.trim();
+        t_decodeRes decodedRes = decodeRes(rencodedRes);
+        if (!decodedRes.isOk) {
+          String encodedErr = encodeRes("err", false, "ping_back_failed");
+          Serial.println(encodedErr);
+        }
+      }
       goto executor;
     }
 
@@ -73,15 +86,15 @@ void loop() {
       }
     }
 
-    if (decodedCommand.command == "beacon") {
+    if (decodedCommand.command == "strobe") {
       if (decodedCommand.value == "on") {
-        state.beacon = true;
+        state.strobe = true;
         String encodedRes = encodeRes(decodedCommand.command, true, "on");
         Serial.println(encodedRes);
         goto executor;
       }
       if (decodedCommand.value == "off") {
-        state.beacon = false;
+        state.strobe = false;
         String encodedRes = encodeRes(decodedCommand.command, true, "off");
         Serial.println(encodedRes);
         goto executor;
@@ -91,8 +104,8 @@ void loop() {
 
   // Exectutor handler
 executor:
-  if (state.beacon) {
-    if (beacon_state.lastBlink == 0 || millis() - beacon_state.lastBlink >= 1000) {
+  if (state.strobe) {
+    if (strobe_state.lastBlink == 0 || millis() - strobe_state.lastBlink >= 1000) {
       strobePattern();
     }
   }
@@ -100,13 +113,11 @@ executor:
 
 
 void strobePattern() {
-  for (int i = 0; i < 2; i++) {
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(50);
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(50);
-  };
-  beacon_state.lastBlink = millis();
+    digitalWrite(D0, HIGH);
+    delay(100);
+    digitalWrite(D0, LOW);
+    delay(100);
+  strobe_state.lastBlink = millis();
 };
 
 String encodeCommand(String command, String value) {
