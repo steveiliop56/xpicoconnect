@@ -10,21 +10,17 @@ struct t_decodeRes {
 };
 
 struct t_state {
-  bool strobe;
-};
-
-struct t_strobe_state {
-  bool ledOn;
-  int lastBlink;
+  int switchState;
 };
 
 t_state state;
-t_strobe_state strobe_state;
+
+bool isConnected = false;
 
 void setup() {
   Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(D0, OUTPUT);
+  pinMode(D0, INPUT_PULLDOWN);
 }
 
 void loop() {
@@ -56,20 +52,26 @@ void loop() {
     if (decodedCommand.command == "ping") {
       String encodedRes = encodeRes(decodedCommand.command, true, "pong");
       Serial.println(encodedRes);
+    }
+
+    if (decodedCommand.command == "fdx") {
+      String encodedRes = encodeRes(decodedCommand.command, true, decodedCommand.value);
+      Serial.println(encodedRes);
       delay(50);
-      String encodedCmd = encodeCommand("ping", "foo");
+      String encodedCmd = encodeCommand("fdx", decodedCommand.value);
       Serial.println(encodedCmd);
-      if (Serial.available() > 0 ) {
-        String rencodedRes = Serial.readString();
-        rencodedRes.trim();
-        t_decodeRes decodedRes = decodeRes(rencodedRes);
-        if (!decodedRes.isOk) {
-          String encodedErr = encodeRes("err", false, "ping_back_failed");
-          Serial.println(encodedErr);
-        }
+      Serial.setTimeout(2000);
+      String rencodedRes = Serial.readStringUntil('\n');
+      rencodedRes.trim();
+      t_decodeRes decodedRes = decodeRes(rencodedRes);
+      if (!decodedRes.isOk) {
+        String encodedErr = encodeRes("err", false, "fdx_failed");
+        Serial.println(encodedErr);
       }
+      isConnected = true;
       goto executor;
     }
+
 
     if (decodedCommand.command == "led") {
       if (decodedCommand.value == "on") {
@@ -85,39 +87,19 @@ void loop() {
         goto executor;
       }
     }
-
-    if (decodedCommand.command == "strobe") {
-      if (decodedCommand.value == "on") {
-        state.strobe = true;
-        String encodedRes = encodeRes(decodedCommand.command, true, "on");
-        Serial.println(encodedRes);
-        goto executor;
-      }
-      if (decodedCommand.value == "off") {
-        state.strobe = false;
-        String encodedRes = encodeRes(decodedCommand.command, true, "off");
-        Serial.println(encodedRes);
-        goto executor;
-      }
-    }
   }
 
-  // Exectutor handler
 executor:
-  if (state.strobe) {
-    if (strobe_state.lastBlink == 0 || millis() - strobe_state.lastBlink >= 1000) {
-      strobePattern();
-    }
-  }
-};
-
-
-void strobePattern() {
-    digitalWrite(D0, HIGH);
-    delay(100);
-    digitalWrite(D0, LOW);
-    delay(100);
-  strobe_state.lastBlink = millis();
+  if (!isConnected) {
+    return;
+  };
+  int switchValue = digitalRead(D0);
+  if (switchValue != state.switchState) {
+    state.switchState = switchValue;
+    String encodedCmd = encodeCommand("switch_0", String(switchValue));
+    Serial.println(encodedCmd);
+    delay(50);
+  };
 };
 
 String encodeCommand(String command, String value) {
@@ -153,7 +135,7 @@ t_decodeRes decodeRes(String encodedRes) {
   String command = encodedRes.substring(0, ind0);
   command.trim();
   int ind1 = encodedRes.indexOf(":", ind0 + 1);
-  String status = encodedRes.substring(ind0 + 1, ind1 + 1);
+  String status = encodedRes.substring(ind0 + 1, ind1);;
   status.trim();
   String value = encodedRes.substring(ind1 + 1, encodedRes.length());
   value.trim();
