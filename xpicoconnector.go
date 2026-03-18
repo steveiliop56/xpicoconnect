@@ -33,12 +33,6 @@ func NewXPicoConnector(config XPicoConnectorConfig) (*XPicoConnector, error) {
 		return nil, err
 	}
 
-	_, err = xpc.SendPicoCommand("led", []byte("on"))
-
-	if err != nil {
-		return nil, err
-	}
-
 	xpbridge, err := xpc.setupXPHTTPBridge()
 
 	if err != nil {
@@ -207,7 +201,7 @@ func (xpc *XPicoConnector) Close() error {
 	xpc.state.bridgeRefBinders = make(map[string]BridgeRefBind)
 	xpc.state.picoCommandBinders = make(map[string]PicoCommandBind)
 	xpc.state.isCommandPending = false
-	xpc.SendPicoCommand("led", []byte("off"))
+	xpc.SendPicoCommand("end", []byte("foo"))
 	return xpc.port.Close()
 }
 

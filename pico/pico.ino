@@ -1,150 +1,179 @@
+// Yes the code has comments, no AI did not generate them,
+// I wrote them in order to make the flow easier to understand
+
+// Structs holding the decoded command and response data
 struct t_decodeCommand {
   String command;
   String value;
 };
 
-struct t_decodeRes {
+struct t_decodeResponse {
   String command;
-  bool isOk;
+  bool ok;
   String value;
 };
 
-struct t_state {
-  int switchState;
+// Main app state, holds values about the switches and sensors
+struct t_switchStates {
+  int beaconSwitchState = 0;
 };
 
-t_state state;
+t_switchStates switchStates;
 
+// So we don't spam the client if it's not ready to receive
 bool isConnected = false;
 
 void setup() {
   Serial.begin(115200);
+
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(D0, INPUT_PULLDOWN);
+
+  // Initial states
+  switchStates.beaconSwitchState = digitalRead(D0);
 }
 
 void loop() {
   // Command handler
   if (Serial.available() > 0) {
-    String encodedCommand = Serial.readString();
-    encodedCommand.trim();
-
-    if (encodedCommand == "_test") {
-      String encodedCommandT = encodeCommand("foo", "bar");
-      t_decodeCommand decodedCommandT = decodeCommand(encodedCommandT);
-      String encodedResT = encodeRes("foo", true, "bar");
-      t_decodeRes decodedResT = decodeRes(encodedResT);
-      Serial.println("encode command gave: " + encodedCommandT);
-      Serial.println("decode command gave: [command]: " + decodedCommandT.command + " [value]: " + decodedCommandT.value);
-      Serial.println("encode res gave: " + encodedResT);
-      Serial.println("decode res gave: [command]: " + decodedResT.command + " [isOk]: " + String(decodedResT.isOk) + " [value]: " + decodedResT.value);
-      goto executor;
-    }
-
+    String encodedCommand = Serial.readStringUntil('\n');
     t_decodeCommand decodedCommand = decodeCommand(encodedCommand);
 
+    // Validate command
     if (decodedCommand.command == "" || decodedCommand.value == "") {
-      String encodedRes = encodeRes("err", false, "invalid_command");
-      Serial.println(encodedRes);
-      goto executor;
+      String encodedResponse = encodeResponse("err", false, "invalid_command");
+      Serial.println(encodedResponse);
     }
 
+    // Simple ping, mostly for testing
     if (decodedCommand.command == "ping") {
-      String encodedRes = encodeRes(decodedCommand.command, true, "pong");
-      Serial.println(encodedRes);
+      String encodedResponse = encodeResponse(decodedCommand.command, true, "pong");
+      Serial.println(encodedResponse);
     }
 
+    // FDX means full-duplex and it confirms that the client is ready to receive commands and responses.
+    // It's a handshake command that should be sent at the beginning of the connection.
     if (decodedCommand.command == "fdx") {
-      String encodedRes = encodeRes(decodedCommand.command, true, decodedCommand.value);
-      Serial.println(encodedRes);
+      String encodedResponse = encodeResponse(decodedCommand.command, true, decodedCommand.value);
+      Serial.println(encodedResponse);
+
+      // Give some time to the client to process the response before we start sending commands
       delay(50);
-      String encodedCmd = encodeCommand("fdx", decodedCommand.value);
-      Serial.println(encodedCmd);
+
+      String encodedCommand = encodeCommand("fdx", decodedCommand.value);
+      Serial.println(encodedCommand);
+
       Serial.setTimeout(2000);
-      String rencodedRes = Serial.readStringUntil('\n');
-      rencodedRes.trim();
-      t_decodeRes decodedRes = decodeRes(rencodedRes);
-      if (!decodedRes.isOk) {
-        String encodedErr = encodeRes("err", false, "fdx_failed");
-        Serial.println(encodedErr);
+      String clientEncodedResponse = Serial.readStringUntil('\n');
+      t_decodeResponse decodedResponse = decodeResponse(clientEncodedResponse);
+
+      if (!decodedResponse.ok || decodedResponse.command != "fdx" || decodedResponse.value != "bar") {
+        String encodedError = encodeResponse("err", false, "fdx_failed");
+        Serial.println(encodedError);
       }
+
+      // Since we confirmed full-duplex, we are connected
       isConnected = true;
-      goto executor;
+      digitalWrite(LED_BUILTIN, HIGH);
+    }
+
+    // End command "disconnects" the client
+    if (decodedCommand.command == "end") {
+      digitalWrite(LED_BUILTIN, LOW);
+      isConnected = false;
+
+      String encodedResponse = encodeResponse(decodedCommand.command, true, "ok");
+      Serial.println(encodedResponse);
     }
 
 
+    // Led just shows the user that we are connected
     if (decodedCommand.command == "led") {
       if (decodedCommand.value == "on") {
         digitalWrite(LED_BUILTIN, HIGH);
-        String encodedRes = encodeRes(decodedCommand.command, true, "on");
-        Serial.println(encodedRes);
-        goto executor;
+        String encodedResponse = encodeResponse(decodedCommand.command, true, "on");
+        Serial.println(encodedResponse);
       }
       if (decodedCommand.value == "off") {
         digitalWrite(LED_BUILTIN, LOW);
-        String encodedRes = encodeRes(decodedCommand.command, true, "off");
-        Serial.println(encodedRes);
-        goto executor;
+        String encodedResponse = encodeResponse(decodedCommand.command, true, "off");
+        Serial.println(encodedResponse);
       }
     }
   }
 
-executor:
+  // After command checking, we can see what we need to send back
   if (!isConnected) {
     return;
   };
-  int switchValue = digitalRead(D0);
-  if (switchValue != state.switchState) {
-    state.switchState = switchValue;
-    String encodedCmd = encodeCommand("switch_0", String(switchValue));
-    Serial.println(encodedCmd);
-    delay(50);
+
+  int beaconSwitchValue = digitalRead(D0);
+
+  if (beaconSwitchValue != switchStates.beaconSwitchState) {
+    switchStates.beaconSwitchState = beaconSwitchValue;
+    String encodedCommand = encodeCommand("beacon_switch", String(beaconSwitchValue));
+    Serial.println(encodedCommand);
   };
+
+  delay(50);
 };
 
 String encodeCommand(String command, String value) {
   return command + ":" + value;
-}
+};
 
 t_decodeCommand decodeCommand(String encodedCommand) {
   t_decodeCommand decodedCommand;
+  encodedCommand.trim();
+
   int ind0 = encodedCommand.indexOf(":");
   String command = encodedCommand.substring(0, ind0);
   command.trim();
+
   String value = encodedCommand.substring(ind0 + 1, encodedCommand.length());
   value.trim();
+
   decodedCommand.command = command;
   decodedCommand.value = value;
+
   return decodedCommand;
-}
+};
 
-String encodeRes(String command, bool isOk, String value) {
-  String encodedRes = command + ":";
-  if (isOk) {
-    encodedRes += "ok";
+String encodeResponse(String command, bool ok, String value) {
+  String encodedResponse = command + ":";
+  if (ok) {
+    encodedResponse += "ok";
   } else {
-    encodedRes += "not_ok";
+    encodedResponse += "not_ok";
   }
-  encodedRes += ":" + value;
-  return encodedRes;
-}
+  encodedResponse += ":" + value;
+  return encodedResponse;
+};
 
-t_decodeRes decodeRes(String encodedRes) {
-  t_decodeRes decodedRes;
-  int ind0 = encodedRes.indexOf(":");
-  String command = encodedRes.substring(0, ind0);
+t_decodeResponse decodeResponse(String encodedResponse) {
+  t_decodeResponse decodedResponse;
+  encodedResponse.trim();
+
+  int ind0 = encodedResponse.indexOf(":");
+  String command = encodedResponse.substring(0, ind0);
   command.trim();
-  int ind1 = encodedRes.indexOf(":", ind0 + 1);
-  String status = encodedRes.substring(ind0 + 1, ind1);;
+
+  int ind1 = encodedResponse.indexOf(":", ind0 + 1);
+  String status = encodedResponse.substring(ind0 + 1, ind1);
+  ;
   status.trim();
-  String value = encodedRes.substring(ind1 + 1, encodedRes.length());
+
+  String value = encodedResponse.substring(ind1 + 1, encodedResponse.length());
   value.trim();
-  decodedRes.command = command;
-  decodedRes.value = value;
+
+  decodedResponse.command = command;
+  decodedResponse.value = value;
+
   if (status == "ok") {
-    decodedRes.isOk = true;
+    decodedResponse.ok = true;
   } else {
-    decodedRes.isOk = false;
+    decodedResponse.ok = false;
   }
-  return decodedRes;
-}
+
+  return decodedResponse;
+};

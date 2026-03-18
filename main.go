@@ -5,8 +5,7 @@ import (
 )
 
 const (
-	StrobeLightRef = "sim/cockpit/electrical/strobe_lights_on"
-	BatteryOnRef   = "sim/cockpit/electrical/battery_on"
+	BeaconLightRef = "sim/cockpit/electrical/beacon_lights_on"
 )
 
 func main() {
@@ -31,23 +30,23 @@ func main() {
 	}
 
 	connector.BindPicoCommand(PicoCommandBind{
-		Command: "switch_0",
+		Command: "beacon_switch",
 		Callback: func(value []byte) ([]byte, error) {
-			log.Printf("received command: switch_0 with value: %s", string(value))
+			log.Printf("received command: beacon_switch with value: %s", string(value))
 
 			if string(value) == "1" {
-				err := connector.GetXPBridge().SetDataRef(StrobeLightRef, true)
+				err := connector.GetXPBridge().SetDataRef(BeaconLightRef, true)
 				if err != nil {
 					return nil, err
 				}
 			} else {
-				err := connector.GetXPBridge().SetDataRef(StrobeLightRef, false)
+				err := connector.GetXPBridge().SetDataRef(BeaconLightRef, false)
 				if err != nil {
 					return nil, err
 				}
 			}
 
-			encodedRes := encodeResponse("switch_0", "ok", []byte{})
+			encodedRes := encodeResponse("beacon_switch", "ok", []byte{})
 			return encodedRes, nil
 		},
 	})
