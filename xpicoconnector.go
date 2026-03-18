@@ -27,6 +27,9 @@ func NewXPicoConnector(config XPicoConnectorConfig) (*XPicoConnector, error) {
 
 	xpc.setupReader()
 
+	// End previous pico session if it exists, ignore errors since it might fail if there's no session
+	xpc.SendPicoCommand("end", []byte("foo"))
+
 	err = xpc.testPicoFDX()
 
 	if err != nil {
@@ -214,11 +217,17 @@ func (xpc *XPicoConnector) Listen() {
 			for _, bind := range xpc.state.bridgeRefBinders {
 				if bind.IsSlice {
 					res, err := xpc.xpbridge.GetDataRefSlice(bind.Ref)
-					bind.Callback(res, err)
+					if err != nil {
+						continue
+					}
+					bind.Callback(res)
 					continue
 				}
 				res, err := xpc.xpbridge.GetDataRef(bind.Ref)
-				bind.Callback(res, err)
+				if err != nil {
+					continue
+				}
+				bind.Callback(res)
 			}
 		case line := <-xpc.readerChan:
 			fmt.Printf("received line from pico: %s\n", string(line))

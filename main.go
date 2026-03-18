@@ -20,7 +20,7 @@ func main() {
 			Address: "127.0.0.1",
 			Port:    49000,
 		},
-		PollTime: 100,
+		PollTime: 50,
 	}
 
 	connector, err := NewXPicoConnector(connectorCfg)
@@ -48,6 +48,35 @@ func main() {
 
 			encodedRes := encodeResponse("beacon_switch", "ok", []byte{})
 			return encodedRes, nil
+		},
+	})
+
+	prevBeaconState := false
+
+	connector.BindBridgeRef(BridgeRefBind{
+		Ref:     BeaconLightRef,
+		IsSlice: false,
+		Callback: func(value any) {
+			state, ok := value.(bool)
+			if !ok {
+				log.Printf("unexpected type for beacon light ref: %T", value)
+				return
+			}
+			if state != prevBeaconState {
+				log.Printf("beacon light state changed: %v", state)
+				prevBeaconState = state
+				if state {
+					_, err := connector.SendPicoCommand("beacon", []byte("on"))
+					if err != nil {
+						log.Printf("failed to send beacon command: %v", err)
+					}
+				} else {
+					_, err := connector.SendPicoCommand("beacon", []byte("off"))
+					if err != nil {
+						log.Printf("failed to send beacon command: %v", err)
+					}
+				}
+			}
 		},
 	})
 

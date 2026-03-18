@@ -28,6 +28,7 @@ void setup() {
 
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(D0, INPUT_PULLDOWN);
+  pinMode(D1, OUTPUT);
 
   // Initial states
   switchStates.beaconSwitchState = digitalRead(D0);
@@ -96,6 +97,20 @@ void loop() {
       }
       if (decodedCommand.value == "off") {
         digitalWrite(LED_BUILTIN, LOW);
+        String encodedResponse = encodeResponse(decodedCommand.command, true, "off");
+        Serial.println(encodedResponse);
+      }
+    }
+
+    // Beacon flash handler
+    if (decodedCommand.command == "beacon") {
+      if (decodedCommand.value == "on") {
+        digitalWrite(D1, HIGH);
+        String encodedResponse = encodeResponse(decodedCommand.command, true, "on");
+        Serial.println(encodedResponse);
+      }
+      if (decodedCommand.value == "off") {
+        digitalWrite(D1, LOW);
         String encodedResponse = encodeResponse(decodedCommand.command, true, "off");
         Serial.println(encodedResponse);
       }

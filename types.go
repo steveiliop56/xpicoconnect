@@ -45,5 +45,5 @@ type PicoCommandBind struct {
 type BridgeRefBind struct {
 	Ref      string
 	IsSlice  bool
-	Callback func(value any, err error)
+	Callback func(value any)
 }
