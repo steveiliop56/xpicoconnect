@@ -1,7 +1,3 @@
-// Yes the code has comments, no AI did not generate them,
-// I wrote them in order to make the flow easier to understand
-
-// Structs holding the decoded command and response data
 struct t_decodeCommand {
   String command;
   String value;
@@ -13,7 +9,6 @@ struct t_decodeResponse {
   String value;
 };
 
-// Main app state, holds values about the switches and sensors
 struct t_switchStates {
   int beaconSwitchState = 0;
   int landSwitchState = 0;
@@ -24,7 +19,6 @@ struct t_switchStates {
 
 t_switchStates switchStates;
 
-// So we don't spam the client if it's not ready to receive
 bool isConnected = false;
 
 int beaconSwitchPin = D0;
@@ -43,7 +37,6 @@ void setup() {
   pinMode(D3, INPUT_PULLDOWN);
   pinMode(D4, INPUT_PULLDOWN);
 
-  // Initial states
   switchStates.beaconSwitchState = digitalRead(D0);
   switchStates.landSwitchState = digitalRead(D1);
   switchStates.taxiSwitchState = digitalRead(D2);
@@ -52,30 +45,24 @@ void setup() {
 }
 
 void loop() {
-  // Command handler
   if (Serial.available() > 0) {
     String encodedCommand = Serial.readStringUntil('\n');
     t_decodeCommand decodedCommand = decodeCommand(encodedCommand);
 
-    // Validate command
     if (decodedCommand.command == "" || decodedCommand.value == "") {
       String encodedResponse = encodeResponse("err", false, "invalid_command");
       Serial.println(encodedResponse);
     }
 
-    // Simple ping, mostly for testing
     if (decodedCommand.command == "ping") {
       String encodedResponse = encodeResponse(decodedCommand.command, true, "pong");
       Serial.println(encodedResponse);
     }
 
-    // FDX means full-duplex and it confirms that the client is ready to receive commands and responses.
-    // It's a handshake command that should be sent at the beginning of the connection.
     if (decodedCommand.command == "fdx") {
       String encodedResponse = encodeResponse(decodedCommand.command, true, decodedCommand.value);
       Serial.println(encodedResponse);
 
-      // Give some time to the client to process the response before we start sending commands
       delay(50);
 
       String encodedCommand = encodeCommand("fdx", decodedCommand.value);
@@ -90,12 +77,10 @@ void loop() {
         Serial.println(encodedError);
       }
 
-      // Since we confirmed full-duplex, we are connected
       isConnected = true;
       digitalWrite(LED_BUILTIN, HIGH);
     }
 
-    // End command "disconnects" the client
     if (decodedCommand.command == "end") {
       digitalWrite(LED_BUILTIN, LOW);
       isConnected = false;
@@ -104,8 +89,6 @@ void loop() {
       Serial.println(encodedResponse);
     }
 
-
-    // Led just shows the user that we are connected
     if (decodedCommand.command == "led") {
       if (decodedCommand.value == "on") {
         digitalWrite(LED_BUILTIN, HIGH);
@@ -120,7 +103,6 @@ void loop() {
     }
   }
 
-  // After command checking, we can see what we need to send back
   if (!isConnected) {
     return;
   };

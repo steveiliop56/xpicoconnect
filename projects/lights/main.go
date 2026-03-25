@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"strconv"
 
 	"github.com/steveiliop56/xpicoconnect"
 )
@@ -85,16 +86,17 @@ func main() {
 func handleSwitchChange(connector *xpicoconnect.XPicoConnector, command string, value []byte, ref string) ([]byte, error) {
 	log.Printf("received command: %s with value: %s", command, string(value))
 
-	var boolValue bool
+	valueInt, err := strconv.Atoi(string(value))
 
-	if string(value) == "1" {
-		boolValue = true
-	} else {
-		boolValue = false
+	if err != nil {
+		log.Printf("invalid value for command %s: %s, expected 0 or 1", command, string(value))
+		return nil, err
 	}
 
-	err := connector.GetXPBridge().SetDataRef(ref, boolValue)
+	err = connector.GetXPBridge().SetDataRef(ref, valueInt)
+
 	if err != nil {
+		log.Printf("failed to set dataref %s to value %s: %v", ref, string(value), err)
 		return nil, err
 	}
 
