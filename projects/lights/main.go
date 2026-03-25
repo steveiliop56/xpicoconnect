@@ -37,7 +37,8 @@ func main() {
 		PollTime: 50,
 	}
 
-	connector, err := xpicoconnect.NewXPicoConnector(connectorCfg)
+	connector := xpicoconnect.NewXPicoConnector(connectorCfg)
+	err := connector.Initialize()
 
 	if err != nil {
 		log.Fatalf("failed to setup connector: %v", err)

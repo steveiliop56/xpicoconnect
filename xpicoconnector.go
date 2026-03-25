@@ -8,22 +8,62 @@ import (
 	"go.bug.st/serial"
 )
 
-func NewXPicoConnector(config XPicoConnectorConfig) (*XPicoConnector, error) {
-	xpc := &XPicoConnector{
+func NewXPicoConnector(config XPicoConnectorConfig) *XPicoConnector {
+	return &XPicoConnector{
 		config: config,
 		state: XPicoConnectorState{
 			picoCommandBinders: make(map[string]PicoCommandBind),
 			bridgeRefBinders:   make(map[string]BridgeRefBind),
 		},
 	}
+}
 
-	port, err := xpc.setupSerial()
+func (xpc *XPicoConnector) Initialize() error {
+	_, err := xpc.setupSerial()
+	if err != nil {
+		return fmt.Errorf("failed to setup serial connection: %v", err)
+	}
+
+	_, err = xpc.setupXPHTTPBridge()
+	if err != nil {
+		return fmt.Errorf("failed to setup XPHTTPBridge connection: %v", err)
+	}
+
+	return nil
+}
+
+func (xpc *XPicoConnector) WithSerial(serial *serial.Port) (*XPicoConnector, error) {
+	xpc.port = serial
+	return xpc, nil
+}
+
+func (xpc *XPicoConnector) WithXPHTTPBridge(xpbridge *xphttpbridgego.Client) (*XPicoConnector, error) {
+	xpc.xpbridge = xpbridge
+	return xpc, nil
+}
+
+func (xpc *XPicoConnector) setupSerial() (serial.Port, error) {
+	if xpc.port != nil {
+		// End previous pico session if it exists, ignore errors since it might fail if there's no session
+		xpc.SendPicoCommand("end", []byte("foo"))
+		err := xpc.testPicoFDX()
+		if err != nil {
+			return nil, err
+		}
+		return *xpc.port, nil
+	}
+
+	mode := &serial.Mode{
+		BaudRate: xpc.config.SerialConfig.Baudrate,
+	}
+
+	port, err := serial.Open(xpc.config.SerialConfig.Port, mode)
 
 	if err != nil {
 		return nil, err
 	}
 
-	xpc.port = port
+	xpc.port = &port
 
 	xpc.setupReader()
 
@@ -36,44 +76,32 @@ func NewXPicoConnector(config XPicoConnectorConfig) (*XPicoConnector, error) {
 		return nil, err
 	}
 
-	xpbridge, err := xpc.setupXPHTTPBridge()
-
-	if err != nil {
-		return nil, err
-	}
-
-	xpc.xpbridge = xpbridge
-
-	err = xpc.ensureBridgeHealthy()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return xpc, nil
-}
-
-func (xpc *XPicoConnector) setupSerial() (serial.Port, error) {
-	mode := &serial.Mode{
-		BaudRate: xpc.config.SerialConfig.Baudrate,
-	}
-
-	port, err := serial.Open(xpc.config.SerialConfig.Port, mode)
-
-	if err != nil {
-		return nil, err
-	}
-
 	return port, nil
 }
 
 func (xpc *XPicoConnector) setupXPHTTPBridge() (*xphttpbridgego.Client, error) {
+	if xpc.xpbridge != nil {
+		err := xpc.ensureBridgeHealthy()
+		if err != nil {
+			return nil, err
+		}
+		return xpc.xpbridge, nil
+	}
+
 	clientCfg := xphttpbridgego.Config{
 		Address: xpc.config.XPHTTPBridgeConfig.Address,
 		Port:    xpc.config.XPHTTPBridgeConfig.Port,
 	}
 
 	client := xphttpbridgego.NewClient(clientCfg)
+
+	xpc.xpbridge = client
+
+	err := xpc.ensureBridgeHealthy()
+
+	if err != nil {
+		return nil, err
+	}
 
 	return client, nil
 }
@@ -82,7 +110,7 @@ func (xpc *XPicoConnector) setupReader() {
 	xpc.readerChan = make(chan []byte, xpc.config.SerialConfig.BufferSize)
 	go func() {
 		for {
-			line, err := readSerialLine(xpc.config.SerialConfig.BufferSize, xpc.port)
+			line, err := readSerialLine(xpc.config.SerialConfig.BufferSize, *xpc.port)
 			if err != nil {
 				continue
 			}
@@ -96,7 +124,7 @@ func (xpc *XPicoConnector) setupReader() {
 func (xpc *XPicoConnector) testPicoFDX() error {
 	encoded := EncodeCommand("fdx", []byte("foo"))
 
-	_, err := xpc.port.Write(encoded)
+	_, err := (*xpc.port).Write(encoded)
 	if err != nil {
 		return err
 	}
@@ -141,7 +169,7 @@ func (xpc *XPicoConnector) testPicoFDX() error {
 
 	res = EncodeResponse("fdx", "ok", []byte("bar"))
 
-	_, err = xpc.port.Write(res)
+	_, err = (*xpc.port).Write(res)
 	if err != nil {
 		return err
 	}
@@ -156,7 +184,7 @@ func (xpc *XPicoConnector) ensureBridgeHealthy() error {
 func (xpc *XPicoConnector) SendPicoCommand(command string, value []byte) (string, error) {
 	encoded := EncodeCommand(command, value)
 
-	_, err := xpc.port.Write(encoded)
+	_, err := (*xpc.port).Write(encoded)
 	if err != nil {
 		return "", err
 	}
@@ -192,7 +220,7 @@ func (xpc *XPicoConnector) DestroyBridgeBind(ref string) {
 	delete(xpc.state.bridgeRefBinders, ref)
 }
 
-func (xpc *XPicoConnector) GetPort() serial.Port {
+func (xpc *XPicoConnector) GetPort() *serial.Port {
 	return xpc.port
 }
 
@@ -205,7 +233,7 @@ func (xpc *XPicoConnector) Close() error {
 	xpc.state.picoCommandBinders = make(map[string]PicoCommandBind)
 	xpc.state.isCommandPending = false
 	xpc.SendPicoCommand("end", []byte("foo"))
-	return xpc.port.Close()
+	return (*xpc.port).Close()
 }
 
 func (xpc *XPicoConnector) Listen() {
@@ -246,7 +274,7 @@ func (xpc *XPicoConnector) Listen() {
 			if err != nil {
 				res = EncodeResponse(command, "not_ok", []byte("callback_failed"))
 			}
-			_, err = xpc.port.Write(res)
+			_, err = (*xpc.port).Write(res)
 			if err != nil {
 				continue
 			}

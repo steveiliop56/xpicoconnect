@@ -32,7 +32,7 @@ type XPicoConnectorState struct {
 type XPicoConnector struct {
 	config     XPicoConnectorConfig
 	state      XPicoConnectorState
-	port       serial.Port
+	port       *serial.Port
 	xpbridge   *xphttpbridgego.Client
 	readerChan chan []byte
 }
