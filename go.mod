@@ -1,4 +1,4 @@
-module github.com/steveiliop56/pico-sim-bridge
+module github.com/steveiliop56/xpicoconnect
 
 go 1.26.1
 

@@ -13,25 +13,11 @@ struct t_decodeResponse {
   String value;
 };
 
-// Main app state, holds values about the switches and sensors
-struct t_switchStates {
-  int beaconSwitchState = 0;
-};
-
-t_switchStates switchStates;
-
 // So we don't spam the client if it's not ready to receive
 bool isConnected = false;
 
 void setup() {
   Serial.begin(115200);
-
-  pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(D0, INPUT_PULLDOWN);
-  pinMode(D1, OUTPUT);
-
-  // Initial states
-  switchStates.beaconSwitchState = digitalRead(D0);
 }
 
 void loop() {
@@ -87,7 +73,6 @@ void loop() {
       Serial.println(encodedResponse);
     }
 
-
     // Led just shows the user that we are connected
     if (decodedCommand.command == "led") {
       if (decodedCommand.value == "on") {
@@ -101,33 +86,11 @@ void loop() {
         Serial.println(encodedResponse);
       }
     }
-
-    // Beacon flash handler
-    if (decodedCommand.command == "beacon") {
-      if (decodedCommand.value == "on") {
-        digitalWrite(D1, HIGH);
-        String encodedResponse = encodeResponse(decodedCommand.command, true, "on");
-        Serial.println(encodedResponse);
-      }
-      if (decodedCommand.value == "off") {
-        digitalWrite(D1, LOW);
-        String encodedResponse = encodeResponse(decodedCommand.command, true, "off");
-        Serial.println(encodedResponse);
-      }
-    }
   }
 
   // After command checking, we can see what we need to send back
   if (!isConnected) {
     return;
-  };
-
-  int beaconSwitchValue = digitalRead(D0);
-
-  if (beaconSwitchValue != switchStates.beaconSwitchState) {
-    switchStates.beaconSwitchState = beaconSwitchValue;
-    String encodedCommand = encodeCommand("beacon_switch", String(beaconSwitchValue));
-    Serial.println(encodedCommand);
   };
 
   delay(50);

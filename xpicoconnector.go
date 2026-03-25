@@ -94,7 +94,7 @@ func (xpc *XPicoConnector) setupReader() {
 // Send a command to the pico, wait for the response,
 // then wait for a command from the pico and send a response back
 func (xpc *XPicoConnector) testPicoFDX() error {
-	encoded := encodeCommand("fdx", []byte("foo"))
+	encoded := EncodeCommand("fdx", []byte("foo"))
 
 	_, err := xpc.port.Write(encoded)
 	if err != nil {
@@ -111,7 +111,7 @@ func (xpc *XPicoConnector) testPicoFDX() error {
 		return fmt.Errorf("timed out waiting for response from pico")
 	}
 
-	_, err = decodeResponse(res)
+	_, err = DecodeResponse(res)
 
 	if err != nil {
 		return err
@@ -126,7 +126,7 @@ func (xpc *XPicoConnector) testPicoFDX() error {
 
 	xpc.state.isCommandPending = false
 
-	cmd, value, err := decodeCommand(res)
+	cmd, value, err := DecodeCommand(res)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func (xpc *XPicoConnector) testPicoFDX() error {
 		return fmt.Errorf("expected response 'foo', got '%s'", value)
 	}
 
-	res = encodeResponse("fdx", "ok", []byte("bar"))
+	res = EncodeResponse("fdx", "ok", []byte("bar"))
 
 	_, err = xpc.port.Write(res)
 	if err != nil {
@@ -154,7 +154,7 @@ func (xpc *XPicoConnector) ensureBridgeHealthy() error {
 }
 
 func (xpc *XPicoConnector) SendPicoCommand(command string, value []byte) (string, error) {
-	encoded := encodeCommand(command, value)
+	encoded := EncodeCommand(command, value)
 
 	_, err := xpc.port.Write(encoded)
 	if err != nil {
@@ -173,7 +173,7 @@ func (xpc *XPicoConnector) SendPicoCommand(command string, value []byte) (string
 
 	xpc.state.isCommandPending = false
 
-	return decodeResponse(res)
+	return DecodeResponse(res)
 }
 
 func (xpc *XPicoConnector) BindPicoCommand(bind PicoCommandBind) {
@@ -234,7 +234,7 @@ func (xpc *XPicoConnector) Listen() {
 			if xpc.state.isCommandPending {
 				continue
 			}
-			command, value, err := decodeCommand(line)
+			command, value, err := DecodeCommand(line)
 			if err != nil {
 				continue
 			}
@@ -244,7 +244,7 @@ func (xpc *XPicoConnector) Listen() {
 			}
 			res, err := binder.Callback([]byte(value))
 			if err != nil {
-				res = encodeResponse(command, "not_ok", []byte("callback_failed"))
+				res = EncodeResponse(command, "not_ok", []byte("callback_failed"))
 			}
 			_, err = xpc.port.Write(res)
 			if err != nil {

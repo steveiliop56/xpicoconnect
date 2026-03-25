@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func encodeCommand(command string, value []byte) []byte {
+func EncodeCommand(command string, value []byte) []byte {
 	var sb strings.Builder
 	sb.WriteString(command)
 	sb.WriteString(":")
@@ -18,7 +18,7 @@ func encodeCommand(command string, value []byte) []byte {
 	return []byte(sb.String())
 }
 
-func decodeCommand(data []byte) (string, string, error) {
+func DecodeCommand(data []byte) (string, string, error) {
 	parts := strings.SplitN(string(data), ":", 2)
 	if len(parts) != 2 {
 		return "", "", fmt.Errorf("invalid command, expected command:value, got %v", string(data))
@@ -26,7 +26,7 @@ func decodeCommand(data []byte) (string, string, error) {
 	return parts[0], parts[1], nil
 }
 
-func decodeResponse(res []byte) (string, error) {
+func DecodeResponse(res []byte) (string, error) {
 	parts := strings.SplitN(string(res), ":", 3)
 	if len(parts) != 3 {
 		return "", fmt.Errorf("invalid response, expected command:status:result, got %v", string(res))
@@ -37,7 +37,7 @@ func decodeResponse(res []byte) (string, error) {
 	return parts[2], nil
 }
 
-func encodeResponse(command string, status string, result []byte) []byte {
+func EncodeResponse(command string, status string, result []byte) []byte {
 	var sb strings.Builder
 	sb.WriteString(command)
 	sb.WriteString(":")
