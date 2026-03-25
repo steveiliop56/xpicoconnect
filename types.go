@@ -1,4 +1,4 @@
-package main
+package xpicoconnect
 
 import (
 	xphttpbridgego "github.com/steveiliop56/xphttpbridge-go"

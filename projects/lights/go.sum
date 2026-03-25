@@ -10,6 +10,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/steveiliop56/xphttpbridge-go v0.0.0-20260316173342-fca42013eac5 h1:9NyFeKRSOkP5IpXREQagtLvndviFEjsau3k9KbNFf7k=
 github.com/steveiliop56/xphttpbridge-go v0.0.0-20260316173342-fca42013eac5/go.mod h1:N3ymf8Rp8hlQLKvdgbLn9V4Zu5oV42GLJFmr8WF9oUo=
+github.com/steveiliop56/xpicoconnect v0.0.0-20260325161149-b7f2bf551b45 h1:QZrkI/7ZpnHmwtdyB5QYwhT5izoPpm73LFD/B4JHHh4=
+github.com/steveiliop56/xpicoconnect v0.0.0-20260325161149-b7f2bf551b45/go.mod h1:wr7xAm2lIE9JMlNugU6NFNnpHw+NUCpZ2bup0EF4Jm8=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 go.bug.st/serial v1.6.4 h1:7FmqNPgVp3pu2Jz5PoPtbZ9jJO5gnEnZIvnI1lzve8A=
