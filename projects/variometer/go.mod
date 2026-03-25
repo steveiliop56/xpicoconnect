@@ -1,10 +1,10 @@
-module lights
+module variometer
 
 go 1.26.1
 
-require github.com/steveiliop56/xpicoconnect v0.0.0-20260325161149-b7f2bf551b45
-
 replace github.com/steveiliop56/xpicoconnect => ../..
+
+require github.com/steveiliop56/xpicoconnect v0.0.0-00010101000000-000000000000
 
 require (
 	github.com/creack/goselect v0.1.2 // indirect
