@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/steveiliop56/xpicoconnect"
@@ -32,7 +33,9 @@ func main() {
 			Address: "127.0.0.1",
 			Port:    49000,
 		},
-		PollTime: 50,
+		// We don't need to poll too fast for the VSI since it doesn't change that rapidly,
+		// and it gives us more time to process the data and update the servo position
+		PollTime: 200,
 	}
 
 	connector := xpicoconnect.NewXPicoConnector(connectorCfg)
@@ -48,13 +51,9 @@ func main() {
 		Callback: func(value any) {
 			verticalSpeed := value.(float64)
 			log.Printf("Vertical speed: %f fpm", verticalSpeed)
-			servo_pos := (verticalSpeed-float64(C172VSI.Min))/(float64(C172VSI.Max)-float64(C172VSI.Min))*(180-0) + 0
-			if servo_pos < 0 {
-				servo_pos = 0
-			} else if servo_pos > 180 {
-				servo_pos = 180
-			}
-			log.Printf("Servo position: %f degrees", servo_pos)
+			servo_pos := int((verticalSpeed-float64(C172VSI.Min))/(float64(C172VSI.Max)-float64(C172VSI.Min))*(180-0) + 0)
+			log.Printf("Servo position: %d degrees", servo_pos)
+			connector.SendPicoCommand("vsi_servo", fmt.Appendf([]byte{}, "%d", servo_pos))
 		},
 	})
 
