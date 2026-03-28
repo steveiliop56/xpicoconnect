@@ -1,7 +1,11 @@
 package xpicoconnect
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"os/signal"
+	"syscall"
 	"time"
 
 	xphttpbridgego "github.com/steveiliop56/xphttpbridge-go"
@@ -237,7 +241,10 @@ func (xpc *XPicoConnector) Close() error {
 }
 
 func (xpc *XPicoConnector) Listen() {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	ticker := time.NewTicker(time.Duration(xpc.config.PollTime) * time.Millisecond)
+	defer ticker.Stop()
+	defer stop()
 
 	for {
 		select {
@@ -258,7 +265,7 @@ func (xpc *XPicoConnector) Listen() {
 				bind.Callback(res)
 			}
 		case line := <-xpc.readerChan:
-			fmt.Printf("received line from pico: %s\n", string(line))
+			log.Printf("received line from pico: %s\n", string(line))
 			if xpc.state.isCommandPending {
 				continue
 			}
@@ -278,6 +285,15 @@ func (xpc *XPicoConnector) Listen() {
 			if err != nil {
 				continue
 			}
+		case <-ctx.Done():
+			log.Printf("%v received, shutting down...\n", context.Cause(ctx))
+			goto shutdown
 		}
+	}
+
+shutdown:
+	err := xpc.Close()
+	if err != nil {
+		fmt.Printf("error closing XPicoConnector: %v\n", err)
 	}
 }

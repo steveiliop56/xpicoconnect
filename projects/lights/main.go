@@ -45,6 +45,8 @@ func main() {
 		log.Fatalf("failed to setup connector: %v", err)
 	}
 
+	log.Println("subscribing to events")
+
 	connector.BindPicoCommand(xpicoconnect.PicoCommandBind{
 		Command: "beacon_switch",
 		Callback: func(value []byte) ([]byte, error) {
@@ -79,6 +81,8 @@ func main() {
 			return handleSwitchChange(connector, "strobe_switch", value, StrobeLightRef)
 		},
 	})
+
+	log.Println("starting listener")
 
 	connector.Listen()
 }
