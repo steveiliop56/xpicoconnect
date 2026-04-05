@@ -22,24 +22,15 @@ var C172VSI = VSI{
 }
 
 func main() {
-	connectorCfg := xpicoconnect.XPicoConnectorConfig{
-		SerialConfig: xpicoconnect.SerialConfig{
-			Baudrate:   115200,
-			Port:       "/dev/ttyACM0",
-			BufferSize: 256,
-			Timeout:    10000,
-		},
-		XPHTTPBridgeConfig: xpicoconnect.XPHTTPBridgeConfig{
-			Address: "127.0.0.1",
-			Port:    49000,
-		},
-		// We don't need to poll too fast for the VSI since it doesn't change that rapidly,
-		// and it gives us more time to process the data and update the servo position
-		PollTime: 200,
+	connector := xpicoconnect.NewXPicoConnector(xpicoconnect.XPicoConnectorConfig{})
+
+	err := connector.ReadInConfig("config.ini")
+
+	if err != nil {
+		log.Fatalf("failed to read config: %v", err)
 	}
 
-	connector := xpicoconnect.NewXPicoConnector(connectorCfg)
-	err := connector.Initialize()
+	err = connector.Initialize()
 
 	if err != nil {
 		log.Fatalf("failed to setup connector: %v", err)

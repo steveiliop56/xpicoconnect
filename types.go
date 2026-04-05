@@ -6,21 +6,21 @@ import (
 )
 
 type SerialConfig struct {
-	Baudrate   int
-	Port       string
-	BufferSize int
-	Timeout    int
+	Baudrate   int    `ini:"baudrate"`
+	Port       string `ini:"port"`
+	BufferSize int    `ini:"buffer_size"`
+	Timeout    int    `ini:"timeout"`
 }
 
 type XPHTTPBridgeConfig struct {
-	Address string
-	Port    int
+	Address string `ini:"address"`
+	Port    int    `ini:"port"`
 }
 
 type XPicoConnectorConfig struct {
-	SerialConfig       SerialConfig
-	XPHTTPBridgeConfig XPHTTPBridgeConfig
-	PollTime           int
+	SerialConfig       SerialConfig       `ini:"serial"`
+	XPHTTPBridgeConfig XPHTTPBridgeConfig `ini:"xphttpbridge"`
+	PollTime           int                `ini:"poll_time"`
 }
 
 type XPicoConnectorState struct {

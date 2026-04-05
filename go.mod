@@ -11,4 +11,5 @@ require (
 	github.com/creack/goselect v0.1.2 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
+	gopkg.in/ini.v1 v1.67.1 // indirect
 )

@@ -11,6 +11,7 @@ import (
 	xphttpbridgego "github.com/steveiliop56/xphttpbridge-go"
 	"github.com/steveiliop56/xpicoconnect/commands"
 	"go.bug.st/serial"
+	"gopkg.in/ini.v1"
 )
 
 func NewXPicoConnector(config XPicoConnectorConfig) *XPicoConnector {
@@ -34,6 +35,18 @@ func (xpc *XPicoConnector) Initialize() error {
 		return fmt.Errorf("failed to setup XPHTTPBridge connection: %v", err)
 	}
 
+	return nil
+}
+
+func (xpc *XPicoConnector) ReadInConfig(path string) error {
+	config, err := ini.Load(path)
+	if err != nil {
+		return err
+	}
+	err = config.MapTo(&xpc.config)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

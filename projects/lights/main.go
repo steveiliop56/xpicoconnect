@@ -6,6 +6,7 @@ import (
 
 	"github.com/steveiliop56/xpicoconnect"
 	"github.com/steveiliop56/xpicoconnect/commands"
+	"github.com/steveiliop56/xpicoconnect/hat"
 )
 
 const (
@@ -25,32 +26,40 @@ type SwitchStates struct {
 }
 
 func main() {
-	connectorCfg := xpicoconnect.XPicoConnectorConfig{
-		SerialConfig: xpicoconnect.SerialConfig{
-			Baudrate:   115200,
-			Port:       "/dev/ttyACM0",
-			BufferSize: 256,
-			Timeout:    10000,
-		},
-		XPHTTPBridgeConfig: xpicoconnect.XPHTTPBridgeConfig{
-			Address: "127.0.0.1",
-			Port:    49000,
-		},
-		PollTime: 50,
+	connector := xpicoconnect.NewXPicoConnector(xpicoconnect.XPicoConnectorConfig{})
+
+	err := connector.ReadInConfig("config.ini")
+
+	if err != nil {
+		log.Fatalf("failed to read config: %v", err)
 	}
 
-	connector := xpicoconnect.NewXPicoConnector(connectorCfg)
-	err := connector.Initialize()
+	err = connector.Initialize()
 
 	if err != nil {
 		log.Fatalf("failed to setup connector: %v", err)
 	}
 
+	ht := hat.NewHat(hat.HatConfig{
+		BinPath:        "/usr/bin/python3",
+		PyPath:         "../../python/hat.py",
+		AnimationDelay: 0.05,
+	})
+
+	err = ht.Test(true)
+
+	if err != nil {
+		log.Fatalf("failed to setup hat: %v", err)
+	}
+
 	log.Println("subscribing to events")
+
+	ht.Main(true)
 
 	connector.BindPicoCommand(xpicoconnect.PicoCommandBind{
 		Command: "beacon_switch",
 		Callback: func(value []byte) ([]byte, error) {
+			go hatTx(ht)
 			return handleSwitchChange(connector, "beacon_switch", value, BeaconLightRef)
 		},
 	})
@@ -58,6 +67,7 @@ func main() {
 	connector.BindPicoCommand(xpicoconnect.PicoCommandBind{
 		Command: "land_switch",
 		Callback: func(value []byte) ([]byte, error) {
+			go hatTx(ht)
 			return handleSwitchChange(connector, "land_switch", value, LandLightRef)
 		},
 	})
@@ -65,6 +75,7 @@ func main() {
 	connector.BindPicoCommand(xpicoconnect.PicoCommandBind{
 		Command: "taxi_switch",
 		Callback: func(value []byte) ([]byte, error) {
+			go hatTx(ht)
 			return handleSwitchChange(connector, "taxi_switch", value, TaxiLightRef)
 		},
 	})
@@ -72,6 +83,7 @@ func main() {
 	connector.BindPicoCommand(xpicoconnect.PicoCommandBind{
 		Command: "nav_switch",
 		Callback: func(value []byte) ([]byte, error) {
+			go hatTx(ht)
 			return handleSwitchChange(connector, "nav_switch", value, NavLightRef)
 		},
 	})
@@ -79,6 +91,7 @@ func main() {
 	connector.BindPicoCommand(xpicoconnect.PicoCommandBind{
 		Command: "strobe_switch",
 		Callback: func(value []byte) ([]byte, error) {
+			go hatTx(ht)
 			return handleSwitchChange(connector, "strobe_switch", value, StrobeLightRef)
 		},
 	})
@@ -86,6 +99,8 @@ func main() {
 	log.Println("starting listener")
 
 	connector.Listen()
+
+	ht.Shutdown(true)
 }
 
 func handleSwitchChange(connector *xpicoconnect.XPicoConnector, command string, value []byte, ref string) ([]byte, error) {
@@ -107,4 +122,12 @@ func handleSwitchChange(connector *xpicoconnect.XPicoConnector, command string, 
 
 	encodedRes := commands.EncodeResponse(command, "ok", []byte{})
 	return encodedRes, nil
+}
+
+func hatTx(hat *hat.Hat) {
+	err := hat.Transmit(true)
+
+	if err != nil {
+		log.Printf("error receiving from hat: %v", err)
+	}
 }

@@ -2,6 +2,7 @@ package hat
 
 import (
 	"fmt"
+	"log"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -35,6 +36,7 @@ func (h *Hat) callPy(cmd string) (string, error) {
 	pypath := path.Base(abspy)
 	var stdout strings.Builder
 	var stderr strings.Builder
+	log.Printf("running command %v %v %v on %v", h.config.BinPath, pypath, cmd, basepath)
 	ecmd := exec.Command(h.config.BinPath, pypath, cmd)
 	ecmd.Dir = basepath
 	ecmd.Stdout = &stdout
@@ -46,13 +48,16 @@ func (h *Hat) callPy(cmd string) (string, error) {
 	return stdout.String(), nil
 }
 
-func (h *Hat) buildAnimation(animation string, direction string, delay float32) string {
+func (h *Hat) buildAnimation(animation string, direction string, delay float32, clear bool) string {
 	var builder strings.Builder
 	builder.WriteString(animation)
 	builder.WriteString(":")
 	builder.WriteString(direction)
 	builder.WriteString(",")
 	fmt.Fprintf(&builder, "%f", delay)
+	if clear {
+		builder.WriteString(",clear")
+	}
 	return builder.String()
 }
 
@@ -68,27 +73,27 @@ func (h *Hat) runAnimation(animation string) error {
 	return nil
 }
 
-func (h *Hat) Test() error {
-	anim := h.buildAnimation("test", "left", h.config.AnimationDelay)
+func (h *Hat) Test(clear bool) error {
+	anim := h.buildAnimation("test", "left", h.config.AnimationDelay, clear)
 	return h.runAnimation(anim)
 }
 
-func (h *Hat) Transmit() error {
-	anim := h.buildAnimation("transmit", "up", h.config.AnimationDelay)
+func (h *Hat) Transmit(clear bool) error {
+	anim := h.buildAnimation("tx", "up", h.config.AnimationDelay, clear)
 	return h.runAnimation(anim)
 }
 
-func (h *Hat) Receive() error {
-	anim := h.buildAnimation("receive", "down", h.config.AnimationDelay)
+func (h *Hat) Receive(clear bool) error {
+	anim := h.buildAnimation("rx", "down", h.config.AnimationDelay, clear)
 	return h.runAnimation(anim)
 }
 
-func (h *Hat) Main() error {
-	anim := h.buildAnimation("main", "left", h.config.AnimationDelay)
+func (h *Hat) Main(clear bool) error {
+	anim := h.buildAnimation("main", "left", h.config.AnimationDelay, clear)
 	return h.runAnimation(anim)
 }
 
-func (h *Hat) Shutdown() error {
-	anim := h.buildAnimation("shutdown", "right", h.config.AnimationDelay)
+func (h *Hat) Shutdown(clear bool) error {
+	anim := h.buildAnimation("shutdown", "right", h.config.AnimationDelay, clear)
 	return h.runAnimation(anim)
 }

@@ -22,6 +22,7 @@ except Exception:
     exit(0)
 
 sense = SenseHat()
+sense.low_light = True
 
 
 def animate_down(image, delay=0.02):
@@ -80,6 +81,26 @@ def animate_right(image, delay=0.02):
         sleep(delay)
 
 
+def extract_params(val):
+    parts = val.split(",")
+    if len(parts) < 1 or len(parts) > 3:
+        raise ValueError("bad_len")
+    anim = animate.get(parts[0])
+    if anim is None:
+        raise ValueError("bad_animation")
+    delay = 0.02
+    if len(parts) == 2:
+        try:
+            delay = float(parts[1])
+        except Exception:
+            raise ValueError("bad_delay")
+    with_clear = False
+    if len(parts) == 3:
+        if parts[2] == "clear":
+            with_clear = True
+    return anim, delay, with_clear
+
+
 images = {
     "rx": receive_img,
     "tx": send_img,
@@ -107,31 +128,16 @@ if img is None:
     print(encode_response("main", "not_ok", "bad_cmd"))
     exit(0)
 
-val_parts = val.split(",")
-
-if len(val_parts) < 1:
-    print(encode_response("main", "not_ok", "bad_val"))
-    exit(0)
-
-anim_type = val_parts[0]
-
-delay = 0.02
-
-if len(val_parts) >= 2:
-    if len(val_parts) > 2:
-        print(encode_response("main", "not_ok", "bad_val"))
-        exit(0)
-    try:
-        delay = float(val_parts[1])
-    except Exception:
-        print(encode_response("main", "not_ok", "bad_val"))
-        exit(0)
-
-anim = animate.get(anim_type)
-
-if anim is None:
-    print(encode_response("main", "not_ok", "bad_val"))
+try:
+    anim, delay, with_clear = extract_params(val)
+except Exception as e:
+    print(encode_response("main", "not_ok", e))
     exit(0)
 
 anim(img, delay)
+
+if with_clear:
+    sleep(0.5)
+    sense.clear()
+
 print(encode_response("main", "ok", "done"))
