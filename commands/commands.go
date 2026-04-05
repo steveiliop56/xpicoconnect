@@ -23,7 +23,7 @@ func DecodeCommand(data []byte) (string, string, error) {
 	if len(parts) != 2 {
 		return "", "", fmt.Errorf("invalid command, expected command:value, got %v", string(data))
 	}
-	return parts[0], parts[1], nil
+	return parts[0], strings.TrimSpace(parts[1]), nil
 }
 
 func DecodeResponse(res []byte) (string, error) {
@@ -34,7 +34,7 @@ func DecodeResponse(res []byte) (string, error) {
 	if parts[1] != "ok" {
 		return "", fmt.Errorf("command failed with status: %s, result: %s", parts[1], parts[2])
 	}
-	return parts[2], nil
+	return strings.TrimSpace(parts[2]), nil
 }
 
 func EncodeResponse(command string, status string, result []byte) []byte {

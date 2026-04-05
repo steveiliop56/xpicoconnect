@@ -12,7 +12,7 @@ def decode_command(command):
     parts = command.split(":")
     if len(parts) != 2:
         raise ValueError("Invalid command format")
-    return parts[0], parts[1]
+    return parts[0], parts[1].strip()
 
 
 def decode_response(response):
@@ -21,7 +21,7 @@ def decode_response(response):
         raise ValueError("Invalid response format")
     if parts[1] != "ok":
         raise ValueError("Response indicates failure")
-    return parts[2]
+    return parts[2].strip()
 
 
 def encode_response(command, status, value):
