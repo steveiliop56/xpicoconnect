@@ -9,6 +9,7 @@ import (
 	"time"
 
 	xphttpbridgego "github.com/steveiliop56/xphttpbridge-go"
+	"github.com/steveiliop56/xpicoconnect/commands"
 	"go.bug.st/serial"
 )
 
@@ -126,7 +127,7 @@ func (xpc *XPicoConnector) setupReader() {
 // Send a command to the pico, wait for the response,
 // then wait for a command from the pico and send a response back
 func (xpc *XPicoConnector) testPicoFDX() error {
-	encoded := EncodeCommand("fdx", []byte("foo"))
+	encoded := commands.EncodeCommand("fdx", []byte("foo"))
 
 	_, err := (*xpc.port).Write(encoded)
 	if err != nil {
@@ -143,7 +144,7 @@ func (xpc *XPicoConnector) testPicoFDX() error {
 		return fmt.Errorf("timed out waiting for response from pico")
 	}
 
-	_, err = DecodeResponse(res)
+	_, err = commands.DecodeResponse(res)
 
 	if err != nil {
 		return err
@@ -158,7 +159,7 @@ func (xpc *XPicoConnector) testPicoFDX() error {
 
 	xpc.state.isCommandPending = false
 
-	cmd, value, err := DecodeCommand(res)
+	cmd, value, err := commands.DecodeCommand(res)
 	if err != nil {
 		return err
 	}
@@ -171,7 +172,7 @@ func (xpc *XPicoConnector) testPicoFDX() error {
 		return fmt.Errorf("expected response 'foo', got '%s'", value)
 	}
 
-	res = EncodeResponse("fdx", "ok", []byte("bar"))
+	res = commands.EncodeResponse("fdx", "ok", []byte("bar"))
 
 	_, err = (*xpc.port).Write(res)
 	if err != nil {
@@ -186,7 +187,7 @@ func (xpc *XPicoConnector) ensureBridgeHealthy() error {
 }
 
 func (xpc *XPicoConnector) SendPicoCommand(command string, value []byte) (string, error) {
-	encoded := EncodeCommand(command, value)
+	encoded := commands.EncodeCommand(command, value)
 
 	_, err := (*xpc.port).Write(encoded)
 	if err != nil {
@@ -205,7 +206,7 @@ func (xpc *XPicoConnector) SendPicoCommand(command string, value []byte) (string
 
 	xpc.state.isCommandPending = false
 
-	return DecodeResponse(res)
+	return commands.DecodeResponse(res)
 }
 
 func (xpc *XPicoConnector) BindPicoCommand(bind PicoCommandBind) {
@@ -269,7 +270,7 @@ func (xpc *XPicoConnector) Listen() {
 			if xpc.state.isCommandPending {
 				continue
 			}
-			command, value, err := DecodeCommand(line)
+			command, value, err := commands.DecodeCommand(line)
 			if err != nil {
 				continue
 			}
@@ -279,7 +280,7 @@ func (xpc *XPicoConnector) Listen() {
 			}
 			res, err := binder.Callback([]byte(value))
 			if err != nil {
-				res = EncodeResponse(command, "not_ok", []byte("callback_failed"))
+				res = commands.EncodeResponse(command, "not_ok", []byte("callback_failed"))
 			}
 			_, err = (*xpc.port).Write(res)
 			if err != nil {

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/steveiliop56/xpicoconnect"
+	"github.com/steveiliop56/xpicoconnect/commands"
 )
 
 const (
@@ -104,6 +105,6 @@ func handleSwitchChange(connector *xpicoconnect.XPicoConnector, command string, 
 		return nil, err
 	}
 
-	encodedRes := xpicoconnect.EncodeResponse(command, "ok", []byte{})
+	encodedRes := commands.EncodeResponse(command, "ok", []byte{})
 	return encodedRes, nil
 }
