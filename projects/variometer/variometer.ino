@@ -17,7 +17,8 @@ bool isConnected = false;
 void setup() {
   Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
-  vsiservo.attach(D0);
+  vsiservo.attach(D1, 300, 2600); // good timings for the waveshare sg90
+  vsiservo.write(90);
 }
 
 void loop() {
@@ -85,12 +86,6 @@ void loop() {
         Serial.println(encodedResponse);
     }
   }
-
-  if (!isConnected) {
-    return;
-  };
-
-  delay(50);
 };
 
 String encodeCommand(String command, String value) {

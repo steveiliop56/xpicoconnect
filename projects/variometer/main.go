@@ -17,8 +17,8 @@ type VSI struct {
 }
 
 var C172VSI = VSI{
-	Min: -2000,
-	Max: 2000,
+	Min: -1000,
+	Max: 1000,
 }
 
 func main() {
@@ -36,6 +36,11 @@ func main() {
 		log.Fatalf("failed to setup connector: %v", err)
 	}
 
+	// reset the servo to the middle position on startup
+	connector.SendPicoCommand("vsi_servo", fmt.Appendf([]byte{}, "%d", 90))
+
+	log.Println("subscribing to events")
+
 	connector.BindBridgeRef(xpicoconnect.BridgeRefBind{
 		Ref:     VerticalSpeedRef,
 		IsSlice: false,
@@ -47,6 +52,8 @@ func main() {
 			connector.SendPicoCommand("vsi_servo", fmt.Appendf([]byte{}, "%d", servo_pos))
 		},
 	})
+
+	log.Println("starting listener")
 
 	connector.Listen()
 }
