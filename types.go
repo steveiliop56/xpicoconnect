@@ -17,9 +17,15 @@ type XPHTTPBridgeConfig struct {
 	Port    int    `ini:"port"`
 }
 
+type InitConfig struct {
+	RetryInterval int `ini:"retry_interval"`
+	MaxRetries    int `ini:"max_retries"`
+}
+
 type XPicoConnectorConfig struct {
 	SerialConfig       SerialConfig       `ini:"serial"`
 	XPHTTPBridgeConfig XPHTTPBridgeConfig `ini:"xphttpbridge"`
+	InitConfig         InitConfig         `ini:"init"`
 	PollTime           int                `ini:"poll_time"`
 }
 

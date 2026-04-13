@@ -7,6 +7,7 @@ require github.com/steveiliop56/xpicoconnect v0.0.0-20260325161149-b7f2bf551b45
 replace github.com/steveiliop56/xpicoconnect => ../..
 
 require (
+	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/creack/goselect v0.1.2 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/steveiliop56/xphttpbridge-go v0.0.0-20260316173342-fca42013eac5 // indirect

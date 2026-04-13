@@ -8,15 +8,36 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cenkalti/backoff/v5"
 	xphttpbridgego "github.com/steveiliop56/xphttpbridge-go"
 	"github.com/steveiliop56/xpicoconnect/commands"
 	"go.bug.st/serial"
 	"gopkg.in/ini.v1"
 )
 
-func NewXPicoConnector(config XPicoConnectorConfig) *XPicoConnector {
+func newDefaultConfig() XPicoConnectorConfig {
+	return XPicoConnectorConfig{
+		SerialConfig: SerialConfig{
+			Baudrate:   115200,
+			Port:       "/dev/ttyACM0",
+			BufferSize: 256,
+			Timeout:    10000,
+		},
+		XPHTTPBridgeConfig: XPHTTPBridgeConfig{
+			Address: "localhost",
+			Port:    49000,
+		},
+		InitConfig: InitConfig{
+			MaxRetries:    5,
+			RetryInterval: 5000,
+		},
+		PollTime: 30,
+	}
+}
+
+func NewXPicoConnector() *XPicoConnector {
 	return &XPicoConnector{
-		config: config,
+		config: newDefaultConfig(),
 		state: XPicoConnectorState{
 			picoCommandBinders: make(map[string]PicoCommandBind),
 			bridgeRefBinders:   make(map[string]BridgeRefBind),
@@ -24,13 +45,43 @@ func NewXPicoConnector(config XPicoConnectorConfig) *XPicoConnector {
 	}
 }
 
+func (xpc *XPicoConnector) WithConfig(config XPicoConnectorConfig) *XPicoConnector {
+	xpc.config = config
+	return xpc
+}
+
+func (xpc *XPicoConnector) withBackoff(op func() error) error {
+	exp := backoff.NewExponentialBackOff()
+	exp.InitialInterval = time.Duration(xpc.config.InitConfig.RetryInterval) * time.Millisecond
+	exp.RandomizationFactor = 0.1
+	exp.Multiplier = 1.5
+	exp.Reset()
+
+	_, err := backoff.Retry(context.TODO(), func() (bool, error) {
+		err := op()
+		if err != nil {
+			log.Printf("operation failed: %v, retrying...\n", err)
+			return false, err
+		}
+		return true, nil
+	}, backoff.WithBackOff(exp), backoff.WithMaxTries(uint(xpc.config.InitConfig.MaxRetries)))
+
+	return err
+}
+
 func (xpc *XPicoConnector) Initialize() error {
-	_, err := xpc.setupSerial()
+	err := xpc.withBackoff(func() error {
+		_, err := xpc.setupSerial()
+		return err
+	})
 	if err != nil {
 		return fmt.Errorf("failed to setup serial connection: %v", err)
 	}
 
-	_, err = xpc.setupXPHTTPBridge()
+	err = xpc.withBackoff(func() error {
+		_, err := xpc.setupXPHTTPBridge()
+		return err
+	})
 	if err != nil {
 		return fmt.Errorf("failed to setup XPHTTPBridge connection: %v", err)
 	}

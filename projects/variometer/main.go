@@ -22,7 +22,7 @@ var C172VSI = VSI{
 }
 
 func main() {
-	connector := xpicoconnect.NewXPicoConnector(xpicoconnect.XPicoConnectorConfig{})
+	connector := xpicoconnect.NewXPicoConnector()
 
 	err := connector.ReadInConfig("config.ini")
 
